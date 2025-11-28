@@ -179,6 +179,16 @@ document.addEventListener('DOMContentLoaded', () => {
         filterNames();
     });
 
+    // Toggle filters on mobile
+    const toggleFiltersBtn = document.getElementById('toggle-filters');
+    const filtersSection = document.querySelector('.filters');
+
+    if (toggleFiltersBtn) {
+        toggleFiltersBtn.addEventListener('click', () => {
+            filtersSection.classList.toggle('expanded');
+        });
+    }
+
     // Initial render
     renderNames(namesData);
     generateAlphabetNav();
