@@ -1,11 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baby Name Finder</title>
+    <title>Türkçe Bebek İsimleri Rehberi</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <h1>Baby Name Finder</h1>
+    <div class="container">
+        <header>
+            <h1>Bebek İsimleri Rehberi</h1>
+            <p class="subtitle">Bebeğiniz için en güzel Türkçe isimleri keşfedin</p>
+        </header>
+
+        <section class="filters">
+            <div class="filter-group">
+                <label for="search">İsim Ara</label>
+                <input type="text" id="search" placeholder="Örn: Deniz...">
+            </div>
+
+            <div class="filter-group">
+                <label for="gender">Cinsiyet</label>
+                <select id="gender">
+                    <option value="Tümü">Tümü</option>
+                    <option value="Kız">Kız</option>
+                    <option value="Erkek">Erkek</option>
+                    <option value="Üniseks">Üniseks</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="origin">Köken</label>
+                <select id="origin">
+                    <option value="Tümü">Tümü</option>
+                    <option value="Türkçe">Türkçe</option>
+                    <option value="Arapça">Arapça</option>
+                    <option value="Farsça">Farsça</option>
+                    <option value="Yunanca">Yunanca</option>
+                    <option value="Moğolca">Moğolca</option>
+                    <option value="Fransızca">Fransızca</option>
+                    <option value="İtalyanca">İtalyanca</option>
+                    <option value="Süryanice">Süryanice</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="syllables">Hece Sayısı</label>
+                <select id="syllables">
+                    <option value="Tümü">Farketmez</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4+</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="length">Maksimum Uzunluk</label>
+                <input type="number" id="length" placeholder="Farketmez" min="2" max="15">
+            </div>
+
+            <div class="filter-group">
+                <label for="exclude-letters">Hariç Tut (Harfler)</label>
+                <input type="text" id="exclude-letters" placeholder="Örn: r-s-e">
+            </div>
+
+            <div class="filter-group">
+                <button id="clear-filters" class="clear-btn">Filtreleri Temizle</button>
+            </div>
+        </section>
+
+        <main id="results" class="results-grid">
+            <!-- Name cards will be injected here -->
+        </main>
+
+        <div id="alphabet-nav" class="alphabet-nav">
+            <!-- Letters will be injected here -->
+        </div>
+    </div>
+
+    <script src="names.js"></script>
+    <script src="script.js"></script>
 </body>
+
 </html>
