@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lengthFilter = document.getElementById('length');
     const searchInput = document.getElementById('search');
     const excludeLettersInput = document.getElementById('exclude-letters');
+    const quranFilter = document.getElementById('quran');
     const alphabetNav = document.getElementById('alphabet-nav');
 
     function renderNames(names) {
@@ -27,12 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (name.gender === 'Kız') genderClass = 'gender-girl';
             if (name.gender === 'Erkek') genderClass = 'gender-boy';
 
+            const quranBadge = name.inQuran ? '<span class="quran-badge" title="Kuran\'da geçiyor">📖</span>' : '';
+
             card.innerHTML = `
                 <div class="name-header">
                     <span class="name-text">${name.name}</span>
                     <span class="gender-badge ${genderClass}">${name.gender}</span>
                 </div>
-                <div class="origin-tag">${name.origin}</div>
+                <div class="meta-info">
+                    <div class="origin-tag">${name.origin}</div>
+                    ${quranBadge}
+                </div>
                 <div class="meaning">
                     "${name.meaning}"
                 </div>
@@ -49,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lengthValue = lengthFilter.value;
         const searchValue = searchInput.value.toLocaleLowerCase('tr');
         const excludeLettersValue = excludeLettersInput.value;
+        const quranValue = quranFilter.checked;
 
         const filtered = namesData.filter(item => {
             // Gender Logic
@@ -68,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 (syllablesValue === '4' ? item.syllables >= 4 : item.syllables === parseInt(syllablesValue));
             const matchLength = !lengthValue || item.length <= parseInt(lengthValue);
             const matchSearch = item.name.toLocaleLowerCase('tr').includes(searchValue);
+            const matchQuran = !quranValue || item.inQuran;
 
             // Exclude letters filter
             let matchExclude = true;
@@ -77,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchExclude = !excludedLetters.some(letter => nameLower.includes(letter));
             }
 
-            return matchGender && matchOrigin && matchSyllables && matchLength && matchSearch && matchExclude;
+            return matchGender && matchOrigin && matchSyllables && matchLength && matchSearch && matchExclude && matchQuran;
         });
 
         renderNames(filtered);
@@ -122,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syllablesFilter.addEventListener('change', filterNames);
     lengthFilter.addEventListener('input', filterNames);
     searchInput.addEventListener('input', filterNames);
+    quranFilter.addEventListener('change', filterNames);
 
     // Exclude letters input formatting
     excludeLettersInput.addEventListener('keydown', (e) => {
@@ -176,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syllablesFilter.value = 'Tümü';
         lengthFilter.value = '';
         excludeLettersInput.value = '';
+        quranFilter.checked = false;
         filterNames();
     });
 

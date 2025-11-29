@@ -244,8 +244,14 @@ input:focus {
     color: #4b5563;
 }
 
-.origin-tag {
+.meta-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     margin-top: 0.5rem;
+}
+
+.origin-tag {
     font-size: 0.75rem;
     color: var(--text-light);
     font-weight: 500;
@@ -392,4 +398,33 @@ input:focus {
         grid-row: auto;
         margin-top: 0;
     }
+}
+
+/* Checkbox Styles */
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Quran Badge */
+.quran-badge {
+    font-size: 1rem;
+    cursor: help;
 }
