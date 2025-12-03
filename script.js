@@ -63,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (genderValue === 'Tümü') {
                 matchGender = true;
             } else if (genderValue === 'Kız') {
-                matchGender = item.gender === 'Kız' || item.gender === 'Üniseks';
+                matchGender = item.gender === 'Kız' || item.gender === 'Her ikisi';
             } else if (genderValue === 'Erkek') {
-                matchGender = item.gender === 'Erkek' || item.gender === 'Üniseks';
+                matchGender = item.gender === 'Erkek' || item.gender === 'Her ikisi';
             } else {
                 matchGender = item.gender === genderValue;
             }
