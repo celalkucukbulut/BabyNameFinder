@@ -145,6 +145,12 @@ Sadece JSON formatında yanıt ver, başka açıklama ekleme.`;
             });
         }
 
+        // Enforce Turkish Title Case formatting (e.g., IŞIL -> Işıl)
+        if (parsedResponse.isName && parsedResponse.name) {
+            parsedResponse.name = parsedResponse.name.toLocaleUpperCase('tr').charAt(0) +
+                parsedResponse.name.substring(1).toLocaleLowerCase('tr');
+        }
+
         // Return the parsed response
         return res.status(200).json(parsedResponse);
 

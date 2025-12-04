@@ -77,8 +77,13 @@ module.exports = async (req, res) => {
 
             // Validate and sanitize each name object
             for (const nameData of namesToCreate) {
-                // Sanitize HTML tags
-                if (nameData.name) nameData.name = nameData.name.replace(/<[^>]*>/g, '').trim();
+                // Sanitize HTML tags and format name (Turkish Title Case)
+                if (nameData.name) {
+                    let cleanName = nameData.name.replace(/<[^>]*>/g, '').trim();
+                    // Format: First letter Upper (TR), rest Lower (TR)
+                    nameData.name = cleanName.toLocaleUpperCase('tr').charAt(0) +
+                        cleanName.substring(1).toLocaleLowerCase('tr');
+                }
                 if (nameData.meaning) nameData.meaning = nameData.meaning.replace(/<[^>]*>/g, '').trim();
                 if (nameData.origin) nameData.origin = nameData.origin.replace(/<[^>]*>/g, '').trim();
 
