@@ -1,6 +1,11 @@
 const { connectToDatabase } = require('../lib/mongodb');
 const Name = require('../models/Name');
 
+// In-memory cache
+let cachedData = null;
+let cacheTime = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 module.exports = async (req, res) => {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -23,13 +28,41 @@ module.exports = async (req, res) => {
 
         // Handle GET request - Fetch all names
         if (req.method === 'GET') {
-            const names = await Name.find({}).select('-__v -createdAt -updatedAt').lean();
+            const now = Date.now();
+
+            // Return cached data if available and fresh
+            if (cachedData && cacheTime && (now - cacheTime < CACHE_DURATION)) {
+                res.setHeader('X-Cache', 'HIT');
+                return res.status(200).json(cachedData);
+            }
+
+            // Fetch fresh data from database
+            const names = await Name.find({})
+                .select('-__v -createdAt -updatedAt')
+                .sort({ name: 1 })
+                .limit(5000) // Prevent massive queries
+                .lean();
+
+            // Update cache
+            cachedData = names;
+            cacheTime = now;
+
+            res.setHeader('X-Cache', 'MISS');
+            res.setHeader('Cache-Control', 'public, s-maxage=300');
             return res.status(200).json(names);
         }
 
         // Handle POST request - Add new name(s)
         if (req.method === 'POST') {
             const { body } = req;
+
+            // Size limit check (prevent large payloads)
+            if (JSON.stringify(body).length > 10000) {
+                return res.status(413).json({
+                    error: 'Request too large',
+                    details: 'Payload exceeds size limit'
+                });
+            }
 
             // Validate request body
             if (!body || (Array.isArray(body) && body.length === 0) || (!Array.isArray(body) && !body.name)) {
@@ -42,8 +75,14 @@ module.exports = async (req, res) => {
             // Support both single object and array of objects
             const namesToCreate = Array.isArray(body) ? body : [body];
 
-            // Validate each name object
+            // Validate and sanitize each name object
             for (const nameData of namesToCreate) {
+                // Sanitize HTML tags
+                if (nameData.name) nameData.name = nameData.name.replace(/<[^>]*>/g, '').trim();
+                if (nameData.meaning) nameData.meaning = nameData.meaning.replace(/<[^>]*>/g, '').trim();
+                if (nameData.origin) nameData.origin = nameData.origin.replace(/<[^>]*>/g, '').trim();
+
+                // Validate required fields
                 if (!nameData.name || !nameData.gender || !nameData.origin ||
                     nameData.syllables === undefined || nameData.length === undefined ||
                     !nameData.meaning || nameData.inQuran === undefined) {
@@ -52,10 +91,22 @@ module.exports = async (req, res) => {
                         details: 'Each name must have: name, gender, origin, syllables, length, meaning, and inQuran'
                     });
                 }
+
+                // Length validation
+                if (nameData.name.length > 30 || nameData.meaning.length > 200 || nameData.origin.length > 50) {
+                    return res.status(400).json({
+                        error: 'Invalid request',
+                        details: 'Field length exceeds maximum allowed'
+                    });
+                }
             }
 
             // Create names in database
             const createdNames = await Name.create(namesToCreate);
+
+            // Invalidate cache
+            cachedData = null;
+            cacheTime = null;
 
             return res.status(201).json({
                 message: `Successfully created ${createdNames.length} name(s)`,

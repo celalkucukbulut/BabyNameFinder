@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         namesData = await response.json();
         isDataLoaded = true;
-        console.log(`Loaded ${namesData.length} names from API`);
 
         // Load Gemini-generated names from localStorage
         loadGeminiNamesFromLocalStorage();
@@ -33,7 +32,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderNames(namesData);
         generateAlphabetNav();
     } catch (error) {
-        console.error('Error loading names:', error);
         resultsContainer.innerHTML = `
             <div class="error-state">
                 <p>❌ İsimler yüklenirken bir hata oluştu.</p>
@@ -55,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.setItem('geminiNames', JSON.stringify(geminiNames));
             }
         } catch (error) {
-            console.error('Error saving to localStorage:', error);
+            // Silent fail for localStorage
         }
     }
 
@@ -72,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         } catch (error) {
-            console.error('Error loading from localStorage:', error);
+            // Silent fail for localStorage
         }
     }
 
@@ -85,15 +83,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="no-results-container">
                     <p class="subtitle">Aradığınız kriterlere uygun isim bulunamadı.</p>
                     <div class="gemini-input-container">
-                        <p class="gemini-prompt">Bir isim mi kontrol etmek ister misiniz?</p>
                         <input 
                             type="text" 
                             id="gemini-name-input" 
                             class="gemini-input" 
-                            placeholder="İsim girin (max 30 karakter)..." 
+                            placeholder="İsim girin..." 
                             maxlength="30"
                         >
-                        <button id="gemini-check-btn" class="gemini-check-btn">Kontrol Et</button>
+                        <button id="gemini-check-btn" class="gemini-check-btn">Yapay zeka ile bul</button>
                         <div id="gemini-loading" class="gemini-loading" style="display: none;">
                             <div class="spinner"></div>
                             <p>Kontrol ediliyor...</p>
@@ -211,10 +208,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Save to namesData array
+            // Save the validated name to MongoDB
+            try {
+                const saveResponse = await fetch('/api/names', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                // Name saved successfully or will be kept in memory only
+            } catch (saveError) {
+                // Continue even if save fails - name will still be in memory
+            }
+
+            // Add to local namesData array
             namesData.push(data);
 
-            // Save to localStorage for persistence across sessions
+            // Also save to localStorage as backup
             saveGeminiNamesToLocalStorage(data);
 
             // Display the name card with Gemini data
@@ -228,7 +240,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             checkBtn.disabled = false;
             errorDiv.textContent = `Hata: ${error.message}. Lütfen tekrar deneyin.`;
             errorDiv.style.display = 'block';
-            console.error('Gemini API Error:', error);
         }
     }
 

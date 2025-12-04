@@ -41,8 +41,12 @@ const nameSchema = new mongoose.Schema({
     timestamps: true // Automatically add createdAt and updatedAt fields
 });
 
-// Create index on name for faster searches
-nameSchema.index({ name: 1 });
+// Create indexes for faster queries
+nameSchema.index({ name: 1 }); // Single field index
+nameSchema.index({ name: 1, gender: 1 }); // Compound index for name + gender queries
+nameSchema.index({ origin: 1 }); // Index for filtering by origin
+nameSchema.index({ inQuran: 1 }); // Index for Quran filter
+nameSchema.index({ gender: 1, origin: 1 }); // Common filter combination
 
 // Prevent OverwriteModelError in serverless environments
 const Name = mongoose.models.Name || mongoose.model('Name', nameSchema);
