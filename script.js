@@ -9,11 +9,82 @@
     const quranFilter = document.getElementById('quran');
     const alphabetNav = document.getElementById('alphabet-nav');
 
+    // Load Gemini-generated names from localStorage on page load
+    loadGeminiNamesFromLocalStorage();
+
+    // Helper function to save a Gemini-generated name to localStorage
+    function saveGeminiNamesToLocalStorage(nameData) {
+        try {
+            let geminiNames = JSON.parse(localStorage.getItem('geminiNames') || '[]');
+
+            // Check if name already exists (avoid duplicates)
+            const exists = geminiNames.some(n => n.name.toLocaleLowerCase('tr') === nameData.name.toLocaleLowerCase('tr'));
+            if (!exists) {
+                geminiNames.push(nameData);
+                localStorage.setItem('geminiNames', JSON.stringify(geminiNames));
+            }
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+        }
+    }
+
+    // Helper function to load Gemini names from localStorage
+    function loadGeminiNamesFromLocalStorage() {
+        try {
+            const geminiNames = JSON.parse(localStorage.getItem('geminiNames') || '[]');
+
+            // Add to namesData if they don't already exist
+            geminiNames.forEach(name => {
+                const exists = namesData.some(n => n.name.toLocaleLowerCase('tr') === name.name.toLocaleLowerCase('tr'));
+                if (!exists) {
+                    namesData.push(name);
+                }
+            });
+        } catch (error) {
+            console.error('Error loading from localStorage:', error);
+        }
+    }
+
     function renderNames(names) {
         resultsContainer.innerHTML = '';
 
         if (names.length === 0) {
-            resultsContainer.innerHTML = '<p class="subtitle" style="text-align: center; grid-column: 1/-1;">Aradığınız kriterlere uygun isim bulunamadı.</p>';
+            // Show Gemini AI input for checking if text is a name
+            resultsContainer.innerHTML = `
+                <div class="no-results-container">
+                    <p class="subtitle">Aradığınız kriterlere uygun isim bulunamadı.</p>
+                    <div class="gemini-input-container">
+                        <p class="gemini-prompt">Bir isim mi kontrol etmek ister misiniz?</p>
+                        <input 
+                            type="text" 
+                            id="gemini-name-input" 
+                            class="gemini-input" 
+                            placeholder="İsim girin (max 30 karakter)..." 
+                            maxlength="30"
+                        >
+                        <button id="gemini-check-btn" class="gemini-check-btn">Kontrol Et</button>
+                        <div id="gemini-loading" class="gemini-loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Kontrol ediliyor...</p>
+                        </div>
+                        <div id="gemini-error" class="gemini-error" style="display: none;"></div>
+                    </div>
+                </div>
+            `;
+
+            // Add event listener for the check button
+            const checkBtn = document.getElementById('gemini-check-btn');
+            const nameInput = document.getElementById('gemini-name-input');
+
+            if (checkBtn && nameInput) {
+                checkBtn.addEventListener('click', () => checkNameWithGemini());
+                nameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        checkNameWithGemini();
+                    }
+                });
+            }
+
             return;
         }
 
@@ -46,6 +117,141 @@
 
             resultsContainer.appendChild(card);
         });
+    }
+
+    async function checkNameWithGemini() {
+        const nameInput = document.getElementById('gemini-name-input');
+        const loadingDiv = document.getElementById('gemini-loading');
+        const errorDiv = document.getElementById('gemini-error');
+        const checkBtn = document.getElementById('gemini-check-btn');
+
+        const nameValue = nameInput.value.trim();
+
+        // Validate input
+        if (!nameValue) {
+            errorDiv.textContent = 'Lütfen bir isim girin.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (nameValue.length > 30) {
+            errorDiv.textContent = 'İsim en fazla 30 karakter olabilir.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Check if name already exists in database (case-insensitive)
+        const existingName = namesData.find(n => n.name.toLocaleLowerCase('tr') === nameValue.toLocaleLowerCase('tr'));
+        if (existingName) {
+            errorDiv.style.display = 'none';
+            displayGeminiNameCard(existingName, true); // Pass true to indicate it's from cache
+            nameInput.value = ''; // Clear input for next query
+            return;
+        }
+
+        // Hide error, show loading
+        errorDiv.style.display = 'none';
+        loadingDiv.style.display = 'flex';
+        checkBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt: nameValue })
+            });
+
+            const data = await response.json();
+
+            // Hide loading
+            loadingDiv.style.display = 'none';
+            checkBtn.disabled = false;
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Bir hata oluştu');
+            }
+
+            // Check if it's a valid name
+            if (data.isName === false) {
+                errorDiv.textContent = 'Bu bir isim gibi görünmüyor. Lütfen geçerli bir isim girin.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Save to namesData array
+            namesData.push(data);
+
+            // Save to localStorage for persistence across sessions
+            saveGeminiNamesToLocalStorage(data);
+
+            // Display the name card with Gemini data
+            displayGeminiNameCard(data, false);
+
+            // Clear input for next query
+            nameInput.value = '';
+
+        } catch (error) {
+            loadingDiv.style.display = 'none';
+            checkBtn.disabled = false;
+            errorDiv.textContent = `Hata: ${error.message}. Lütfen tekrar deneyin.`;
+            errorDiv.style.display = 'block';
+            console.error('Gemini API Error:', error);
+        }
+    }
+
+    function displayGeminiNameCard(nameData, fromCache = false) {
+        // Find the results container for Gemini cards
+        let geminiResultsContainer = document.getElementById('gemini-results-container');
+
+        // If it doesn't exist, create it and keep the input visible
+        if (!geminiResultsContainer) {
+            geminiResultsContainer = document.createElement('div');
+            geminiResultsContainer.id = 'gemini-results-container';
+            geminiResultsContainer.className = 'gemini-results-container';
+
+            // Insert after the input container
+            const inputContainer = document.querySelector('.gemini-input-container');
+            if (inputContainer && inputContainer.parentNode) {
+                inputContainer.parentNode.insertBefore(geminiResultsContainer, inputContainer.nextSibling);
+            }
+        }
+
+        // Create a name card similar to the existing ones
+        const card = document.createElement('div');
+        card.className = 'name-card gemini-result';
+        card.setAttribute('data-letter', nameData.name.charAt(0).toUpperCase());
+
+        // Map gender to CSS classes
+        let genderClass = 'gender-unisex';
+        if (nameData.gender === 'Kız') genderClass = 'gender-girl';
+        if (nameData.gender === 'Erkek') genderClass = 'gender-boy';
+
+        const quranBadge = nameData.inQuran ? '<span class="quran-badge" title="Kuran\'da geçiyor">📖</span>' : '';
+        const badgeText = fromCache ? '💾 Veritabanından' : '✨ Yapay Zeka ile oluşturuldu';
+
+        card.innerHTML = `
+            <div class="gemini-badge">${badgeText}</div>
+            <div class="name-header">
+                <span class="name-text">${nameData.name}</span>
+                <span class="gender-badge ${genderClass}">${nameData.gender}</span>
+            </div>
+            <div class="meta-info">
+                <div class="origin-tag">${nameData.origin}</div>
+                ${quranBadge}
+            </div>
+            <div class="meaning">
+                "${nameData.meaning}"
+            </div>
+            <div class="gemini-extra-info">
+                <span>Hece: ${nameData.syllables}</span>
+                <span>Uzunluk: ${nameData.length}</span>
+            </div>
+        `;
+
+        // Add to the top of results (most recent first)
+        geminiResultsContainer.insertBefore(card, geminiResultsContainer.firstChild);
     }
 
     function filterNames() {
@@ -155,7 +361,7 @@
         let value = e.target.value.toLocaleUpperCase('tr');
 
         // Remove invalid characters (only allow letters and dashes)
-        value = value.replace(/[^A-ZÇĞİÖŞÜ\-]/g, '');
+        value = value.replace(/[^A-ZÇĞİÖŞÜ\\-]/g, '');
 
         // Remove consecutive dashes
         value = value.replace(/-+/g, '-');
@@ -187,7 +393,9 @@
         excludeLettersInput.value = '';
         quranFilter.checked = false;
         filterNames();
-    });    // Toggle filters on mobile
+    });
+
+    // Toggle filters on mobile
     const toggleFiltersBtn = document.getElementById('toggle-filters');
     const filtersSection = document.querySelector('.filters');
 
