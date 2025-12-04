@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('results');
     const genderFilter = document.getElementById('gender');
     const originFilter = document.getElementById('origin');
@@ -187,14 +187,29 @@ document.addEventListener('DOMContentLoaded', () => {
         excludeLettersInput.value = '';
         quranFilter.checked = false;
         filterNames();
-    });
-
-    // Toggle filters on mobile
+    });    // Toggle filters on mobile
     const toggleFiltersBtn = document.getElementById('toggle-filters');
     const filtersSection = document.querySelector('.filters');
 
     if (toggleFiltersBtn) {
-        toggleFiltersBtn.addEventListener('click', () => {
+        toggleFiltersBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filtersSection.classList.toggle('expanded');
+        });
+    }
+
+    // Mobile close button (Tamam)
+    const mobileCloseBtn = document.getElementById('mobile-close-btn');
+    if (mobileCloseBtn) {
+        mobileCloseBtn.addEventListener('click', () => {
+            filtersSection.classList.remove('expanded');
+        });
+    }
+
+    // Make filter header h2 clickable to toggle
+    const filterHeader = document.querySelector('.filter-header');
+    if (filterHeader) {
+        filterHeader.addEventListener('click', () => {
             filtersSection.classList.toggle('expanded');
         });
     }

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --primary-color: #6366f1;
     --primary-hover: #4f46e5;
     --secondary-color: #ec4899;
@@ -78,12 +78,16 @@ h1 {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    cursor: pointer;
+    user-select: none;
 }
 
 .filter-header h2 {
     font-size: 1.25rem;
     font-weight: 700;
     margin: 0;
+    cursor: pointer;
+    user-select: none;
 }
 
 .toggle-btn {
@@ -160,6 +164,11 @@ input:focus {
 
 .clear-btn:active {
     transform: translateY(0);
+}
+
+/* Mobile-only elements hidden on desktop */
+.mobile-only {
+    display: none;
 }
 
 /* Results Grid */
@@ -332,6 +341,21 @@ input:focus {
     }
 }
 
+
+/* Disclaimer Footer */
+.disclaimer {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 1rem;
+    margin-top: 2rem;
+    color: var(--text-light);
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.disclaimer p {
+    margin: 0;
+}
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .container {
@@ -360,11 +384,21 @@ input:focus {
     .filter-content {
         display: none;
         grid-template-columns: 1fr;
+        gap: 0.5rem;
         margin-top: 1rem;
+    }
+
+    .filter-group:has(#clear-filters) {
+        order: -1;
     }
 
     .filters.expanded .filter-content {
         display: grid;
+    }
+
+    /* Show mobile-only elements on mobile */
+    .mobile-only {
+        display: flex;
     }
 
     .alphabet-nav {
