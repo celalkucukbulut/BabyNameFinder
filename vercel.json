@@ -2,6 +2,9 @@
     "functions": {
         "api/generate.js": {
             "maxDuration": 30
+        },
+        "api/names.js": {
+            "maxDuration": 30
         }
     }
 }

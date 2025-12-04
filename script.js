@@ -1,4 +1,8 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+﻿// Initialize namesData as empty array - will be populated from API
+let namesData = [];
+let isDataLoaded = false;
+
+document.addEventListener('DOMContentLoaded', async () => {
     const resultsContainer = document.getElementById('results');
     const genderFilter = document.getElementById('gender');
     const originFilter = document.getElementById('origin');
@@ -9,8 +13,35 @@
     const quranFilter = document.getElementById('quran');
     const alphabetNav = document.getElementById('alphabet-nav');
 
-    // Load Gemini-generated names from localStorage on page load
-    loadGeminiNamesFromLocalStorage();
+    // Show loading state
+    resultsContainer.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>İsimler yükleniyor...</p></div>';
+
+    try {
+        // Fetch names from API
+        const response = await fetch('/api/names');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        namesData = await response.json();
+        isDataLoaded = true;
+        console.log(`Loaded ${namesData.length} names from API`);
+
+        // Load Gemini-generated names from localStorage
+        loadGeminiNamesFromLocalStorage();
+
+        // Initial render
+        renderNames(namesData);
+        generateAlphabetNav();
+    } catch (error) {
+        console.error('Error loading names:', error);
+        resultsContainer.innerHTML = `
+            <div class="error-state">
+                <p>❌ İsimler yüklenirken bir hata oluştu.</p>
+                <p class="error-details">${error.message}</p>
+                <button onclick="location.reload()" class="retry-btn">Tekrar Dene</button>
+            </div>
+        `;
+    }
 
     // Helper function to save a Gemini-generated name to localStorage
     function saveGeminiNamesToLocalStorage(nameData) {
@@ -421,8 +452,4 @@
             filtersSection.classList.toggle('expanded');
         });
     }
-
-    // Initial render
-    renderNames(namesData);
-    generateAlphabetNav();
 });
