@@ -154,8 +154,9 @@ module.exports = async (req, res) => {
             const existingLower = existingName.name.toLocaleLowerCase('tr');
             const distance = levenshteinDistance(inputLower, existingLower);
 
-            // If the distance is 1-2 characters and names are similar length, likely a typo
-            if (distance >= 1 && distance <= 2 && Math.abs(inputLower.length - existingLower.length) <= 2) {
+            // If the distance is exactly 1 character and names are similar length, likely a typo
+            // Only flag very close matches to avoid false positives on legitimately different names
+            if (distance === 1 && Math.abs(inputLower.length - existingLower.length) <= 1) {
                 return res.status(400).json({
                     error: 'Benzer isim bulundu',
                     details: `"${sanitizedPrompt}" yerine "${existingName.name}" mi demek istediniz? Lütfen doğru yazılışı kullanın.`,
@@ -173,15 +174,18 @@ module.exports = async (req, res) => {
 
 Kontrol edilecek metin: \"${sanitizedPrompt}\"
 
-ÖNEMLİ KURALLAR:
-1. Sadece GERÇEKTEN KULLANILAN Türkçe isimleri kabul et
-2. Yazım hatalarını, yanlış yazılmış isimleri REDDET (örn: "Eylüll" yanlış, "Eylül" doğru)
-3. Gereksiz çift harfleri REDDET (örn: "Mehmettt", "Ayşee" gibi)
-4. Türkçe'de olmayan veya çok nadir kullanılan isimleri REDDET
-5. İsim gibi görünen ama anlamsız metinleri REDDET
-6. Sadece bilinen, yaygın veya az bilinen ama GERÇEK Türkçe isimleri kabul et
 
-Eğer bu GERÇEK, DOĞRU YAZILMIŞ bir Türkçe isimse, lütfen şu formatta JSON döndür:
+ÖNEMLİ KURALLAR:
+1. TÜM GEÇERLİ Türkçe isimleri kabul et (yaygın, az bilinen, eski veya modern tüm gerçek isimler)
+2. Sadece AÇIKÇA YANLIŞ yazılmış isimleri reddet (örn: "Eylüll" → yanlış, "Eylül" → doğru)
+3. Gereksiz ÜÇLÜ veya daha fazla tekrarlanan harfleri reddet (örn: "Mehmettt", "Ayşeee")
+4. Tamamen anlamsız veya rastgele metinleri reddet (örn: "asdfgh", "xyz123")
+5. İsim olmayan kelimeleri reddet (örn: sıfatlar, nesneler)
+
+ÖNEMLİ: Almira, Çolpan, Gülizar gibi az bilinen ama GERÇEKTİR Türkçe isimleri KABUL ET.
+Sadece bariz yazım hataları veya anlamsız metinleri reddet.
+
+Eğer bu GERÇEK bir Türkçe isimse (yaygın veya nadir olmasına bakmaksızın), şu formatta JSON döndür:
 {
   "isName": true,
   "name": "İsim (doğru yazılışı)",
@@ -193,7 +197,7 @@ Eğer bu GERÇEK, DOĞRU YAZILMIŞ bir Türkçe isimse, lütfen şu formatta JSO
   "inQuran": true veya false (Kuran'da geçip geçmediği)
 }
 
-Eğer bu bir isim DEĞİLSE veya YANLIŞ YAZILMIŞSA:
+Eğer bu AÇIKÇA bir isim değilse veya BARIZ bir yazım hatasıysa:
 {
   "isName": false,
   "message": "Bu bir isim değil veya yanlış yazılmış."
