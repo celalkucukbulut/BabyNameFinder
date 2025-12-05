@@ -1,4 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { connectToDatabase } = require('../lib/mongodb');
+const Name = require('../models/Name');
 
 // Simple in-memory rate limiter
 const rateLimit = new Map();
@@ -25,6 +27,34 @@ function getClientIp(req) {
         req.headers['x-real-ip'] ||
         req.connection?.remoteAddress ||
         'unknown';
+}
+
+// Helper function to calculate Levenshtein distance (string similarity)
+function levenshteinDistance(str1, str2) {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const matrix = [];
+
+    for (let i = 0; i <= len1; i++) {
+        matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= len2; j++) {
+        matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+            const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost
+            );
+        }
+    }
+
+    return matrix[len1][len2];
 }
 
 module.exports = async (req, res) => {
@@ -96,31 +126,77 @@ module.exports = async (req, res) => {
             });
         }
 
+        // Additional validation: Check for suspicious patterns
+        // Reject if there are 3+ consecutive identical letters (very rare in Turkish names)
+        if (/(.)\1{2,}/.test(sanitizedPrompt)) {
+            return res.status(400).json({
+                error: 'Invalid name',
+                details: 'Bu bir isim gibi görünmüyor. Lütfen geçerli bir isim girin.'
+            });
+        }
+
+        // Reject if contains non-Turkish alphabet characters (except space and dash)
+        if (!/^[a-zA-ZçÇğĞıİöÖşŞüÜ\s-]+$/.test(sanitizedPrompt)) {
+            return res.status(400).json({
+                error: 'Invalid characters',
+                details: 'Sadece Türkçe harfler kullanabilirsiniz.'
+            });
+        }
+
+        // Connect to database and check for similar names
+        await connectToDatabase();
+
+        // Check if a very similar name already exists (catch typos)
+        const existingNames = await Name.find({}).select('name').lean();
+        const inputLower = sanitizedPrompt.toLocaleLowerCase('tr');
+
+        for (const existingName of existingNames) {
+            const existingLower = existingName.name.toLocaleLowerCase('tr');
+            const distance = levenshteinDistance(inputLower, existingLower);
+
+            // If the distance is 1-2 characters and names are similar length, likely a typo
+            if (distance >= 1 && distance <= 2 && Math.abs(inputLower.length - existingLower.length) <= 2) {
+                return res.status(400).json({
+                    error: 'Benzer isim bulundu',
+                    details: `"${sanitizedPrompt}" yerine "${existingName.name}" mi demek istediniz? Lütfen doğru yazılışı kullanın.`,
+                    suggestion: existingName.name
+                });
+            }
+        }
+
         // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        // Craft a specific prompt for name checking
-        const fullPrompt = `Sen bir Türkçe isim uzmanısın. Sana verilen metin bir isim mi kontrol et ve eğer isimse, bu isim hakkında aşağıdaki formatta JSON bilgisi döndür. Eğer isim değilse, "isim değil" bilgisini döndür.
+        // Craft a specific prompt for name checking with strict validation
+        const fullPrompt = `Sen bir Türkçe isim uzmanısın. Sana verilen metni ÇOK KATLI bir şekilde kontrol et:
 
-Kontrol edilecek metin: "${sanitizedPrompt}"
+Kontrol edilecek metin: \"${sanitizedPrompt}\"
 
-Eğer bu bir isimse, lütfen şu formatta JSON döndür (Türkçe karakterleri kullan):
+ÖNEMLİ KURALLAR:
+1. Sadece GERÇEKTEN KULLANILAN Türkçe isimleri kabul et
+2. Yazım hatalarını, yanlış yazılmış isimleri REDDET (örn: "Eylüll" yanlış, "Eylül" doğru)
+3. Gereksiz çift harfleri REDDET (örn: "Mehmettt", "Ayşee" gibi)
+4. Türkçe'de olmayan veya çok nadir kullanılan isimleri REDDET
+5. İsim gibi görünen ama anlamsız metinleri REDDET
+6. Sadece bilinen, yaygın veya az bilinen ama GERÇEK Türkçe isimleri kabul et
+
+Eğer bu GERÇEK, DOĞRU YAZILMIŞ bir Türkçe isimse, lütfen şu formatta JSON döndür:
 {
   "isName": true,
-  "name": "İsim",
+  "name": "İsim (doğru yazılışı)",
   "gender": "Kız" veya "Erkek" veya "Her ikisi",
-  "origin": "Köken (örn: Türkçe, Arapça, Farsça, vb.)",
+  "origin": "Köken (örn: Türkçe, Arapça, Farsça, İbranice, vb.)",
   "syllables": hece sayısı (sayı),
   "length": karakter uzunluğu (sayı),
   "meaning": "İsmin anlamı",
   "inQuran": true veya false (Kuran'da geçip geçmediği)
 }
 
-Eğer bu bir isim değilse:
+Eğer bu bir isim DEĞİLSE veya YANLIŞ YAZILMIŞSA:
 {
   "isName": false,
-  "message": "Bu bir isim değil."
+  "message": "Bu bir isim değil veya yanlış yazılmış."
 }
 
 Sadece JSON formatında yanıt ver, başka açıklama ekleme.`;

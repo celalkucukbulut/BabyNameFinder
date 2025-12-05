@@ -193,13 +193,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const data = await response.json();
 
+
             // Hide loading
             loadingDiv.style.display = 'none';
             checkBtn.disabled = false;
 
             if (!response.ok) {
-                throw new Error(data.error || 'Bir hata oluştu');
+                // Show detailed error message from API
+                const errorMessage = data.details || data.error || 'Bir hata oluştu';
+                errorDiv.textContent = errorMessage;
+                errorDiv.style.display = 'block';
+
+                // If there's a suggestion, show it prominently
+                if (data.suggestion) {
+                    errorDiv.innerHTML = `${errorMessage}<br><strong>Önerilen: ${data.suggestion}</strong>`;
+                }
+                return;
             }
+
 
             // Check if it's a valid name
             if (data.isName === false) {

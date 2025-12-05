@@ -39,6 +39,7 @@ module.exports = async (req, res) => {
             // Fetch fresh data from database
             const names = await Name.find({})
                 .select('-__v -createdAt -updatedAt')
+                .collation({ locale: 'tr', strength: 2 }) // Turkish locale for proper character sorting
                 .sort({ name: 1 })
                 .limit(5000) // Prevent massive queries
                 .lean();
