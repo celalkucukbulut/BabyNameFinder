@@ -167,43 +167,42 @@ module.exports = async (req, res) => {
 
         // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // Craft a specific prompt for name checking with strict validation
-        const fullPrompt = `Sen bir Türkçe isim uzmanısın. Sana verilen metni ÇOK KATLI bir şekilde kontrol et:
+        const fullPrompt = `You are a Turkish name expert. Check the following text through MULTIPLE strict layers:
 
-Kontrol edilecek metin: \"${sanitizedPrompt}\"
+Text to check: \"${sanitizedPrompt}\"
 
+IMPORTANT RULES:
+1. ACCEPT ALL VALID Turkish names (common, rare, old, or modern - all real names)
+2. REJECT only CLEARLY MISSPELLED names (e.g., "Eylüll" → wrong, "Eylül" → correct)
+3. REJECT names with TRIPLE or more repeated letters (e.g., "Mehmettt", "Ayşeee")
+4. REJECT completely meaningless or random text (e.g., "asdfgh", "xyz123")
+5. REJECT words that are not names (e.g., adjectives, objects)
 
-ÖNEMLİ KURALLAR:
-1. TÜM GEÇERLİ Türkçe isimleri kabul et (yaygın, az bilinen, eski veya modern tüm gerçek isimler)
-2. Sadece AÇIKÇA YANLIŞ yazılmış isimleri reddet (örn: "Eylüll" → yanlış, "Eylül" → doğru)
-3. Gereksiz ÜÇLÜ veya daha fazla tekrarlanan harfleri reddet (örn: "Mehmettt", "Ayşeee")
-4. Tamamen anlamsız veya rastgele metinleri reddet (örn: "asdfgh", "xyz123")
-5. İsim olmayan kelimeleri reddet (örn: sıfatlar, nesneler)
+IMPORTANT: ACCEPT rare but REAL Turkish names like Almira, Çolpan, Gülizar.
+Only reject obvious typos or meaningless text.
 
-ÖNEMLİ: Almira, Çolpan, Gülizar gibi az bilinen ama GERÇEKTİR Türkçe isimleri KABUL ET.
-Sadece bariz yazım hataları veya anlamsız metinleri reddet.
-
-Eğer bu GERÇEK bir Türkçe isimse (yaygın veya nadir olmasına bakmaksızın), şu formatta JSON döndür:
+If this is a REAL Turkish name (regardless of how common or rare), return JSON in this format:
 {
   "isName": true,
-  "name": "İsim (doğru yazılışı)",
-  "gender": "Kız" veya "Erkek" veya "Her ikisi",
-  "origin": "Köken (örn: Türkçe, Arapça, Farsça, İbranice, vb.)",
-  "syllables": hece sayısı (sayı),
-  "length": karakter uzunluğu (sayı),
-  "meaning": "İsmin anlamı",
-  "inQuran": true veya false (Kuran'da geçip geçmediği)
+  "name": "Name (correct spelling)",
+  "gender": "Kız" or "Erkek" or "Her ikisi",
+  "origin": "Origin (e.g., Türkçe, Arapça, Farsça, İbranice, etc.)",
+  "syllables": syllable count (number),
+  "length": character length (number),
+  "meaning": "Meaning of the name in Turkish",
+  "inQuran": true or false (whether it appears in the Quran)
 }
 
-Eğer bu AÇIKÇA bir isim değilse veya BARIZ bir yazım hatasıysa:
+If this is CLEARLY not a name or is an OBVIOUS typo:
 {
   "isName": false,
   "message": "Bu bir isim değil veya yanlış yazılmış."
 }
 
-Sadece JSON formatında yanıt ver, başka açıklama ekleme.`;
+Return ONLY JSON format, no additional explanation.`;
 
         // Send request to Gemini
         const result = await model.generateContent(fullPrompt);
