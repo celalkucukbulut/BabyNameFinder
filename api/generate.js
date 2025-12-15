@@ -167,7 +167,7 @@ module.exports = async (req, res) => {
 
         // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         // Craft a specific prompt for name checking with strict validation
         const fullPrompt = `You are a Turkish name expert. Check the following text through MULTIPLE strict layers:
