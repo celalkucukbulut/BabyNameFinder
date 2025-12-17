@@ -1,6 +1,4 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { connectToDatabase } = require('../lib/mongodb');
-const Name = require('../models/Name');
 
 // Simple in-memory rate limiter
 const rateLimit = new Map();
@@ -29,33 +27,7 @@ function getClientIp(req) {
         'unknown';
 }
 
-// Helper function to calculate Levenshtein distance (string similarity)
-function levenshteinDistance(str1, str2) {
-    const len1 = str1.length;
-    const len2 = str2.length;
-    const matrix = [];
 
-    for (let i = 0; i <= len1; i++) {
-        matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= len2; j++) {
-        matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= len1; i++) {
-        for (let j = 1; j <= len2; j++) {
-            const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-            matrix[i][j] = Math.min(
-                matrix[i - 1][j] + 1,
-                matrix[i][j - 1] + 1,
-                matrix[i - 1][j - 1] + cost
-            );
-        }
-    }
-
-    return matrix[len1][len2];
-}
 
 module.exports = async (req, res) => {
     // Set CORS headers
@@ -143,48 +115,25 @@ module.exports = async (req, res) => {
             });
         }
 
-        // Connect to database and check for similar names
-        await connectToDatabase();
 
-        // Check if a very similar name already exists (catch typos)
-        const existingNames = await Name.find({}).select('name').lean();
-        const inputLower = sanitizedPrompt.toLocaleLowerCase('tr');
-
-        for (const existingName of existingNames) {
-            const existingLower = existingName.name.toLocaleLowerCase('tr');
-            const distance = levenshteinDistance(inputLower, existingLower);
-
-            // If the distance is exactly 1 character and names are similar length, likely a typo
-            // Only flag very close matches to avoid false positives on legitimately different names
-            if (distance === 1 && Math.abs(inputLower.length - existingLower.length) <= 1) {
-                return res.status(400).json({
-                    error: 'Benzer isim bulundu',
-                    details: `"${sanitizedPrompt}" yerine "${existingName.name}" mi demek istediniz? Lütfen doğru yazılışı kullanın.`,
-                    suggestion: existingName.name
-                });
-            }
-        }
 
         // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         // Craft a specific prompt for name checking with strict validation
-        const fullPrompt = `You are a Turkish name expert. Check the following text through MULTIPLE strict layers:
+        const fullPrompt = `**System Instructions:**
+You are a linguistics expert specializing in Turkish Onomastics. Your task is to analyze if a given string is used as a "personal name" (first name) in Türkiye.
 
-Text to check: \"${sanitizedPrompt}\"
+**Context:**
+This is for a cultural research project. Even if a word has a dictionary meaning (e.g., "Deniz" means "Sea"), you must accept it if it is used as a person's name.
 
-IMPORTANT RULES:
-1. ACCEPT ALL VALID Turkish names (common, rare, old, or modern - all real names)
-2. REJECT only CLEARLY MISSPELLED names (e.g., "Eylüll" → wrong, "Eylül" → correct)
-3. REJECT names with TRIPLE or more repeated letters (e.g., "Mehmettt", "Ayşeee")
-4. REJECT completely meaningless or random text (e.g., "asdfgh", "xyz123")
-5. REJECT words that are not names (e.g., adjectives, objects)
+**Rules:**
+1. REJECT: Clearly misspelled names (e.g., 'Ahmettt'), random strings (e.g., 'asdfgh'), or numbers.
+2. DICTIONARY TRAP: Do not reject names just because they are also common nouns or virtues.
 
-IMPORTANT: ACCEPT rare but REAL Turkish names like Almira, Çolpan, Gülizar.
-Only reject obvious typos or meaningless text.
-
-If this is a REAL Turkish name (regardless of how common or rare), return JSON in this format:
+**Output Format:**
+return JSON in this format:
 {
   "isName": true,
   "name": "Name (correct spelling)",
@@ -201,8 +150,8 @@ If this is CLEARLY not a name or is an OBVIOUS typo:
   "isName": false,
   "message": "Bu bir isim değil veya yanlış yazılmış."
 }
-
-Return ONLY JSON format, no additional explanation.`;
+Return ONLY JSON format, no additional explanation.
+**Input Text to Analyze:** \"${sanitizedPrompt}\"`;
 
         // Send request to Gemini
         const result = await model.generateContent(fullPrompt);
