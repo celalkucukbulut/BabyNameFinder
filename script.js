@@ -17,12 +17,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     resultsContainer.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>İsimler yükleniyor...</p></div>';
 
     try {
-        // Fetch names from API
-        const response = await fetch('/api/names');
+        // Fetch names from API (all=true for client-side filtering)
+        const response = await fetch('/api/names?all=true');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        namesData = await response.json();
+        const result = await response.json();
+        // Handle new response format with data property, or legacy array format
+        namesData = result.data || result;
         isDataLoaded = true;
 
         // Load Gemini-generated names from localStorage

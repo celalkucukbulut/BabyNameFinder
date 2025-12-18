@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { validateApiKey, setCorsHeaders, handleOptions } = require('../lib/apiKeyMiddleware');
 
-// Simple in-memory rate limiter
+// Simple in-memory rate limiter (kept as additional layer)
 const rateLimit = new Map();
 
 function checkRateLimit(ip) {
@@ -31,18 +32,18 @@ function getClientIp(req) {
 
 module.exports = async (req, res) => {
     // Set CORS headers
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader(
-        'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
+    setCorsHeaders(res);
 
     // Handle OPTIONS request
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+    if (handleOptions(req, res)) return;
+
+    // Validate API key (required, with stricter rate limit for generate)
+    const apiKeyError = validateApiKey(req, res, { required: true, maxRequests: 30 });
+    if (apiKeyError) {
+        return res.status(apiKeyError.status).json({
+            error: apiKeyError.error,
+            details: apiKeyError.details
+        });
     }
 
     // Check rate limit
