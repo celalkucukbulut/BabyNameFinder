@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --primary-color: #6366f1;
     --primary-hover: #4f46e5;
     --secondary-color: #ec4899;
@@ -389,11 +389,14 @@ input:focus {
     }
 
     .filter-group:has(#clear-filters) {
-        order: -1;
+        display: none;
     }
 
     .filters.expanded .filter-content {
         display: grid;
+        max-height: 60vh;
+        overflow-y: auto;
+        padding-right: 0.5rem;
     }
 
     /* Show mobile-only elements on mobile */

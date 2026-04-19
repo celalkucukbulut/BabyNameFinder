@@ -452,9 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         filterNames();
     });
 
-    // Clear filters button
-    const clearButton = document.getElementById('clear-filters');
-    clearButton.addEventListener('click', () => {
+    function resetFilters() {
         searchInput.value = '';
         genderFilter.value = 'Tümü';
         originFilter.value = 'Tümü';
@@ -465,7 +463,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         endsWithInput.value = '';
         quranFilter.checked = false;
         filterNames();
-    });
+    }
+
+    // Clear filters button
+    const clearButton = document.getElementById('clear-filters');
+    clearButton.addEventListener('click', resetFilters);
 
     // Toggle filters on mobile
     const toggleFiltersBtn = document.getElementById('toggle-filters');
@@ -475,6 +477,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         toggleFiltersBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             filtersSection.classList.toggle('expanded');
+            if (filtersSection.classList.contains('expanded')) {
+                resetFilters();
+            }
         });
     }
 
@@ -491,6 +496,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (filterHeader) {
         filterHeader.addEventListener('click', () => {
             filtersSection.classList.toggle('expanded');
+            if (filtersSection.classList.contains('expanded')) {
+                resetFilters();
+            }
         });
     }
 });

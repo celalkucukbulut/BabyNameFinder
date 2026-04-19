@@ -4,6 +4,7 @@
   "description": "",
   "main": "names.js",
   "scripts": {
+    "start-local": "npx vercel dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
