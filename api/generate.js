@@ -194,9 +194,16 @@ Return ONLY JSON format, no additional explanation.
             });
         }
 
+        if (error.message && error.message.includes('429 Too Many Requests')) {
+            return res.status(429).json({
+                error: 'Kota Sınırı',
+                details: 'Geçici bir hata oluştu'
+            });
+        }
+
         return res.status(500).json({
-            error: 'Internal server error',
-            details: error.message || 'An unexpected error occurred'
+            error: 'Sunucu Hatası',
+            details: 'Geçici bir hata oluştu'
         });
     }
 };
