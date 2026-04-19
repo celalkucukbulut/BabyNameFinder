@@ -37,6 +37,8 @@ module.exports = async (req, res) => {
                 inQuran,
                 search,
                 excludeLetters,
+                startsWith,
+                endsWith,
                 page = 1,
                 limit = 50,
                 all // When 'all=true', return all data without pagination (for web frontend)
@@ -106,6 +108,35 @@ module.exports = async (req, res) => {
                     const excludePattern = letters.map(l => `(?=.*${l})`).join('');
                     query.name = query.name || {};
                     query.name.$not = new RegExp(`^${excludePattern}`, 'i');
+                }
+            }
+
+            // Starts-with filter
+            if (startsWith && startsWith.trim()) {
+                const startsWithTerm = startsWith.trim();
+                // Merge with existing name query if any
+                if (query.name && query.name.$regex) {
+                    // Already has a search regex — apply startsWith as an additional JS-level filter
+                    // For simplicity, keep both by using $and
+                    query.$and = query.$and || [];
+                    query.$and.push({ name: { $regex: `^${startsWithTerm}`, $options: 'i' } });
+                } else {
+                    query.name = query.name || {};
+                    query.name.$regex = `^${startsWithTerm}`;
+                    query.name.$options = 'i';
+                }
+            }
+
+            // Ends-with filter
+            if (endsWith && endsWith.trim()) {
+                const endsWithTerm = endsWith.trim();
+                if (query.$and || (query.name && query.name.$regex)) {
+                    query.$and = query.$and || [];
+                    query.$and.push({ name: { $regex: `${endsWithTerm}$`, $options: 'i' } });
+                } else {
+                    query.name = query.name || {};
+                    query.name.$regex = `${endsWithTerm}$`;
+                    query.name.$options = 'i';
                 }
             }
 

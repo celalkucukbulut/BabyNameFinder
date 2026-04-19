@@ -1,4 +1,4 @@
-﻿// Initialize namesData as empty array - will be populated from API
+// Initialize namesData as empty array - will be populated from API
 let namesData = [];
 let isDataLoaded = false;
 
@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lengthFilter = document.getElementById('length');
     const searchInput = document.getElementById('search');
     const excludeLettersInput = document.getElementById('exclude-letters');
+    const startsWithInput = document.getElementById('starts-with');
+    const endsWithInput = document.getElementById('ends-with');
     const quranFilter = document.getElementById('quran');
     const alphabetNav = document.getElementById('alphabet-nav');
 
@@ -316,6 +318,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const lengthValue = lengthFilter.value;
         const searchValue = searchInput.value.toLocaleLowerCase('tr');
         const excludeLettersValue = excludeLettersInput.value;
+        const startsWithValue = startsWithInput.value.trim().toLocaleLowerCase('tr');
+        const endsWithValue = endsWithInput.value.trim().toLocaleLowerCase('tr');
         const quranValue = quranFilter.checked;
 
         const filtered = namesData.filter(item => {
@@ -346,7 +350,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 matchExclude = !excludedLetters.some(letter => nameLower.includes(letter));
             }
 
-            return matchGender && matchOrigin && matchSyllables && matchLength && matchSearch && matchExclude && matchQuran;
+            // Starts-with filter
+            const matchStartsWith = !startsWithValue ||
+                item.name.toLocaleLowerCase('tr').startsWith(startsWithValue);
+
+            // Ends-with filter
+            const matchEndsWith = !endsWithValue ||
+                item.name.toLocaleLowerCase('tr').endsWith(endsWithValue);
+
+            return matchGender && matchOrigin && matchSyllables && matchLength && matchSearch &&
+                matchExclude && matchQuran && matchStartsWith && matchEndsWith;
         });
 
         renderNames(filtered);
@@ -392,6 +405,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     lengthFilter.addEventListener('input', filterNames);
     searchInput.addEventListener('input', filterNames);
     quranFilter.addEventListener('change', filterNames);
+    startsWithInput.addEventListener('input', filterNames);
+    endsWithInput.addEventListener('input', filterNames);
 
     // Exclude letters input formatting
     excludeLettersInput.addEventListener('keydown', (e) => {
@@ -446,6 +461,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         syllablesFilter.value = 'Tümü';
         lengthFilter.value = '';
         excludeLettersInput.value = '';
+        startsWithInput.value = '';
+        endsWithInput.value = '';
         quranFilter.checked = false;
         filterNames();
     });
